@@ -1,4 +1,4 @@
-name: Setup website
+name: Deploy
 
 on:
   push:
@@ -22,4 +22,3 @@ jobs:
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
-          target-folder: play
