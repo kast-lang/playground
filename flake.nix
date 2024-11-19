@@ -23,6 +23,7 @@
             rust-toolchain
             rust-analyzer
             just
+            trunk
           ];
         };
       };

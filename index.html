@@ -1,0 +1,36 @@
+<html>
+
+<head>
+  <link data-trunk rel="rust" data-typescript="true" data-initializer="initializer.mjs" />
+  <link data-trunk rel="scss" href="style.scss" />
+</head>
+
+
+<body>
+  <h1>Kast Playground</h1>
+  <button id="run-button">Run</button>
+  <div id="container">
+    <div id="editor"></div>
+    <div>
+      <pre id="output"></pre>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.0/min/vs/loader.min.js"></script>
+  <script>
+    // TODO move this somewhere else
+    require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.0/min/vs' } });
+    require(['vs/editor/editor.main'], function () {
+      window.editor = monaco.editor.create(document.getElementById('editor'), {
+        value: [
+          'use std.*;',
+          '',
+          'print "hello, world";'
+        ].join('\n'),
+        language: 'kast'
+      });
+    });
+  </script>
+</body>
+
+</html>
