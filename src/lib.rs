@@ -11,7 +11,7 @@ impl Kast {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
         Self {
-            kast: kast::Kast::new(),
+            kast: kast::Kast::new().unwrap(),
         }
     }
     pub fn set_output(&mut self, output_fn: js_sys::Function) {
@@ -20,15 +20,15 @@ impl Kast {
             unsafe impl Send for PlaygroundOutput {}
             unsafe impl Sync for PlaygroundOutput {}
             impl Output for PlaygroundOutput {
-                fn write(&self, s: String) {
-                    let _ = self.0.call1(&JsValue::NULL, &JsValue::from_str(&s));
+                fn write(&self, s: &str) {
+                    let _ = self.0.call1(&JsValue::NULL, &JsValue::from_str(s));
                 }
             }
             PlaygroundOutput(output_fn)
         });
     }
     pub fn eval(&mut self, source: String) -> Result<(), String> {
-        match self.kast.eval_source(
+        match self.kast.eval_source::<Value>(
             SourceFile {
                 contents: source,
                 filename: "<source>".into(),
