@@ -10,6 +10,7 @@ pub struct Kast {
 impl Kast {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
+        console_error_panic_hook::set_once();
         Self {
             kast: kast::Kast::new().unwrap(),
         }

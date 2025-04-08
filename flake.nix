@@ -10,7 +10,11 @@
   outputs = { self, nixpkgs, rust-overlay }:
     let
       system = "x86_64-linux";
-      pkgs = import nixpkgs { inherit system; overlays = [ (import rust-overlay) ]; };
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [ (import rust-overlay) ];
+        config = { allowUnfree = true; };
+      };
       rust-toolchain = pkgs.rust-bin.stable.latest.default.override {
         extensions = [ "rust-src" ];
         targets = [ "wasm32-unknown-unknown" ];
@@ -23,7 +27,10 @@
             rust-toolchain
             rust-analyzer
             just
-            trunk
+            # trunk downloads binaries that dont work on nixos
+            (writeShellScriptBin "trunk" ''
+              ${lib.getExe pkgs.steam-run} ${lib.getExe pkgs.trunk} "$@"
+            '')
           ];
         };
       };
