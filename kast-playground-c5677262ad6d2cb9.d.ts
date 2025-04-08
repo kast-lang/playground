@@ -3,13 +3,7 @@
 export class Kast {
   free(): void;
   constructor();
-  /**
-   * @param {Function} output_fn
-   */
   set_output(output_fn: Function): void;
-  /**
-   * @param {string} source
-   */
   eval(source: string): void;
 }
 
@@ -19,14 +13,14 @@ export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly __wbg_kast_free: (a: number, b: number) => void;
   readonly kast_new: () => number;
-  readonly kast_set_output: (a: number, b: number) => void;
-  readonly kast_eval: (a: number, b: number, c: number) => Array;
-  readonly __wbindgen_export_0: WebAssembly.Table;
+  readonly kast_set_output: (a: number, b: any) => void;
+  readonly kast_eval: (a: number, b: number, c: number) => [number, number];
+  readonly __wbindgen_exn_store: (a: number) => void;
+  readonly __externref_table_alloc: () => number;
+  readonly __wbindgen_export_2: WebAssembly.Table;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
   readonly __externref_table_dealloc: (a: number) => void;
-  readonly __wbindgen_exn_store: (a: number) => void;
-  readonly __externref_table_alloc: () => number;
   readonly __wbindgen_start: () => void;
 }
 
