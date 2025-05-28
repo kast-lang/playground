@@ -12,7 +12,7 @@ impl Kast {
     pub fn new() -> Self {
         console_error_panic_hook::set_once();
         Self {
-            kast: kast::Kast::new().unwrap(),
+            kast: kast::Kast::new("playground").unwrap(),
         }
     }
     pub fn set_output(&mut self, output_fn: js_sys::Function) {
