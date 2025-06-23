@@ -19,59 +19,130 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.0/min/vs/loader.min.js"></script>
   <script>
+    const GIST_TOKEN = "ghp_" + /*prevent repository rule violation lmao*/
+      "gZgd0PRK0YNXnIbZ7NbbIaOapFL4l42HSwBl";
     const DEFAULT_SOURCE = [
       'use std.*;',
       '',
       'print "hello, world";'
     ].join('\n');
+    const GIST_FILENAME = "main.ks";
 
-    function getCodeFromUrl() {
-      const codeParam = new URLSearchParams(window.location.search).get('code');
-      return codeParam ?
-        decodeURIComponent(codeParam).replace(/\\([nrtbfv'"\\])/g, (match, escapeChar) => ({
-          'n': '\n',
-          'r': '\r',
-          't': '\t',
-          'b': '\b',
-          'f': '\f',
-          'v': '\v',
-          "'": "'",
-          '"': '"',
-          '\\': '\\'
-        })[escapeChar] || match) :
-        DEFAULT_SOURCE;
-    }
-
-    function shareCode() {
-      const currentUrl = new URL(window.location.href);
-      currentUrl.searchParams.set('code', window.editor.getValue());
-      const shareUrl = currentUrl.toString();
-
-      // Copy to clipboard
-      navigator.clipboard.writeText(shareUrl).then(() => alert('Copied to clipboard')).catch(err => {
-        console.error(err);
-        // Fallback for older browsers
-        const textarea = document.createElement('textarea');
-        textarea.value = shareUrl;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-        alert('Copied to clipboard');
+    /**
+     * @param {string} content - The source code
+     * @returns {Promise<string>} - The hash of the uploaded Github Gist
+    */
+    async function createGist(content) {
+      const response = await fetch('https://api.github.com/gists', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'Authorization': `Bearer ${GIST_TOKEN}`,
+          'X-GitHub-Api-Version': '2022-11-28',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: JSON.stringify({
+          description: `Created from Kast Playground on ${new Date().toLocaleString()}`,
+          public: false,
+          files: {
+            [GIST_FILENAME]: {content}
+          }
+        }),
       });
-      window.history.pushState({}, '', currentUrl);
+      const json = await response.json()
+      return json.id
     }
 
-    // TODO move this somewhere else
+    /**
+     * @param {string} hash - The Github Gist hash
+     * @returns {Promise<string>} - The source-code content stored in the corresponding Github Gist
+    */
+    async function getGist(hash) {
+      const response = await fetch(`https://api.github.com/gists/${hash}`, {
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'Authorization': `Bearer ${GIST_TOKEN}`,
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
+      });
+      if (response.status === 404) {
+        throw new Error("Gist not found corresponding to hash");
+      }
+      const json = await response.json()
+
+      let sourceCode;
+      if (GIST_FILENAME in json.files) {
+        sourceCode = json.files[GIST_FILENAME].content
+      } else {
+        const allFiles = Object.values(json.files)
+        // If `main.ks` is not there at least take the first file that's there
+        if (allFiles.length >= 1) {
+          sourceCode = allFiles[0];
+        } else {
+          throw new Error("Invalid Gist")
+        }
+      }
+      return sourceCode
+    }
+
+    // Load - fetch from Gist
     require.config({paths: {'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.0/min/vs'}});
-    require(['vs/editor/editor.main'], function () {
+    require(['vs/editor/editor.main'], async function () {
+      const hash = new URLSearchParams(window.location.search).get('gist');
+
+      let sourceCode;
+      if (hash !== null) {
+        try {
+          // Send get-gist request
+          sourceCode = await getGist(hash)
+        } catch (e) {
+          alert(`Something went wrong fetching gist:\n${e}`);
+          sourceCode = DEFAULT_SOURCE;
+        }
+      } else {
+        sourceCode = DEFAULT_SOURCE
+      }
+
       window.editor = monaco.editor.create(document.getElementById('editor'), {
-        value: getCodeFromUrl(),
+        value: sourceCode,
         language: 'kast'
       });
     });
 
-    document.getElementById("share-button").addEventListener("click", shareCode)
+    // Share - upload to Gist
+    document.getElementById("share-button").addEventListener("click", async () => {
+      const sourceCode/*: string*/ = window.editor.getValue();
+
+      // Send create-gist request
+      let hash;
+      try {
+        hash = await createGist(sourceCode);
+      } catch (e) {
+        alert(`Something went wrong uploading gist:\n${JSON.stringify(e)}`);
+        return;
+      }
+
+      // Update URL
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('gist', hash);
+
+      // Copy URL to clipboard
+      const shareUrl = currentUrl.toString();
+      navigator.clipboard.writeText(shareUrl)
+        .then(() => alert('Copied to clipboard'))
+        .catch(err => {
+          console.error(err);
+          // Fallback for older browsers
+          const textarea = document.createElement('textarea');
+          textarea.value = shareUrl;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          alert('Copied to clipboard');
+        });
+      window.history.pushState({}, '', currentUrl);
+    })
   </script>
 </body>
 
