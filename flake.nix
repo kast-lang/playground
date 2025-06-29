@@ -1,39 +1,15 @@
 {
-  inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    rust-overlay = {
-      url = "github:oxalica/rust-overlay";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-  };
+  inputs = { nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable"; };
 
-  outputs = { self, nixpkgs, rust-overlay }:
+  outputs = inputs:
     let
       system = "x86_64-linux";
-      pkgs = import nixpkgs {
-        inherit system;
-        overlays = [ (import rust-overlay) ];
-        config = { allowUnfree = true; };
-      };
-      rust-toolchain = pkgs.rust-bin.stable.latest.default.override {
-        extensions = [ "rust-src" ];
-        targets = [ "wasm32-unknown-unknown" ];
-      };
-    in
-    {
+      pkgs = import inputs.nixpkgs { inherit system; };
+    in {
       devShells.${system} = {
-        default = pkgs.mkShell {
-          packages = with pkgs; [
-            rust-toolchain
-            rust-analyzer
-            just
-            # trunk downloads binaries that dont work on nixos
-            (writeShellScriptBin "trunk" ''
-              ${lib.getExe pkgs.steam-run} ${lib.getExe pkgs.trunk} "$@"
-            '')
-          ];
-        };
+        default =
+          pkgs.mkShell { packages = with pkgs; [ caddy just nixfmt nil ]; };
       };
-      formatter.${system} = pkgs.nixpkgs-fmt;
+      formatter.${system} = pkgs.nixfmt;
     };
 }

@@ -1,0 +1,2 @@
+serve:
+    caddy file-server --listen 127.0.0.1:8080
