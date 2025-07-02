@@ -172,11 +172,11 @@ monaco.languages.registerDocumentSemanticTokensProvider(
         getLegend() {
             return Kast.semanticTokensProvider.getLegend();
         },
-        provideDocumentSemanticTokens(model, lastResultId, token) {
+        provideDocumentSemanticTokens(model, _lastResultId, _token) {
             return Kast.semanticTokensProvider.provideSemanticTokens(
                 find_state(model));
         },
-        releaseDocumentSemanticTokens(resultId) {
+        releaseDocumentSemanticTokens(_resultId) {
 
         },
     });
@@ -246,7 +246,7 @@ function from_kast_inlay_hint(hint: lsp.InlayHint): monaco.languages.InlayHint {
 monaco.languages.registerDocumentFormattingEditProvider(
     'kast',
     {
-        provideDocumentFormattingEdits(model, options, token) {
+        provideDocumentFormattingEdits(model, _options, _token) {
             const result = Kast.lsp.format(find_state(model));
             if (result == null) return null;
             return result.map(from_kast_text_edit);
@@ -256,7 +256,7 @@ monaco.languages.registerDocumentFormattingEditProvider(
 
 monaco.languages.registerHoverProvider('kast',
     {
-        provideHover(model, position, token, context): monaco.languages.Hover | null {
+        provideHover(model, position, _token, _context): monaco.languages.Hover | null {
             const result = Kast.lsp.hover(to_kast_position(position), find_state(model));
             if (result == null) return null;
             let value;
@@ -272,13 +272,13 @@ monaco.languages.registerHoverProvider('kast',
 );
 
 monaco.languages.registerRenameProvider('kast', {
-    provideRenameEdits(model, position, newName, token) {
+    provideRenameEdits(model, position, newName, _token) {
         const result = Kast.lsp.rename(to_kast_position(position), newName, find_state(model));
         console.log(result);
         if (result == null) return null;
         return from_kast_workspace_edit(result);
     },
-    resolveRenameLocation(model, position, token): monaco.languages.RenameLocation | null {
+    resolveRenameLocation(model, position, _token): monaco.languages.RenameLocation | null {
         const result = Kast.lsp.prepareRename(to_kast_position(position), find_state(model));
         console.log(result);
         if (result == null) throw "not renamable";
@@ -293,7 +293,7 @@ monaco.languages.registerRenameProvider('kast', {
 
 monaco.languages.registerDefinitionProvider('kast',
     {
-        provideDefinition(model, position, token): monaco.languages.Definition | monaco.languages.LocationLink[] | null {
+        provideDefinition(model, position, _token): monaco.languages.Definition | monaco.languages.LocationLink[] | null {
             const result = Kast.lsp.findDefinition(to_kast_position(position), find_state(model));
             if (result == null) return null;
             return result.map(from_kast_location);
@@ -303,7 +303,7 @@ monaco.languages.registerDefinitionProvider('kast',
 
 monaco.languages.registerInlayHintsProvider('kast',
     {
-        provideInlayHints(model, range, token): monaco.languages.InlayHintList | null {
+        provideInlayHints(model, _range, _token): monaco.languages.InlayHintList | null {
             const result = Kast.lsp.inlayHints(find_state(model));
             if (result == null) return null;
             return {
@@ -324,7 +324,7 @@ const editor = monaco.editor.create(document.getElementById('editor')!, {
 });
 
 updateState(editor.getModel()!);
-editor.getModel()?.onDidChangeContent(function (event) {
+editor.getModel()?.onDidChangeContent(function (_event) {
     updateState(editor.getModel()!);
 });
 
