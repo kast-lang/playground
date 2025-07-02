@@ -7,8 +7,9 @@
       pkgs = import inputs.nixpkgs { inherit system; };
     in {
       devShells.${system} = {
-        default =
-          pkgs.mkShell { packages = with pkgs; [ caddy just nixfmt nil ]; };
+        default = pkgs.mkShell {
+          packages = with pkgs; [ nodejs caddy just nixfmt nil ];
+        };
       };
       formatter.${system} = pkgs.nixfmt;
     };

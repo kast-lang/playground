@@ -1,10 +1,11 @@
-<html>
+<!doctype html>
+<html lang="en">
 
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kast Playground</title>
-  <link rel="stylesheet" href="style.css" />
 </head>
-
 
 <body>
   <h1>Kast Playground</h1>
@@ -16,75 +17,7 @@
       <pre id="output"></pre>
     </div>
   </div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.0/min/vs/loader.min.js"></script>
-  <script src="https://kast-lang.github.io/kast/kast_js.bc.js"></script>
-  <script>
-    const DEFAULT_SOURCE = [
-      'use std.*;',
-      '',
-      'print "hello, world";'
-    ].join('\n');
-
-    function getCodeFromUrl() {
-      const codeParam = new URLSearchParams(window.location.search).get('code');
-      return codeParam ?
-        decodeURIComponent(codeParam).replace(/\\([nrtbfv'"\\])/g, (match, escapeChar) => ({
-          'n': '\n',
-          'r': '\r',
-          't': '\t',
-          'b': '\b',
-          'f': '\f',
-          'v': '\v',
-          "'": "'",
-          '"': '"',
-          '\\': '\\'
-        })[escapeChar] || match) :
-        DEFAULT_SOURCE;
-    }
-
-    const output = document.getElementById("output");
-    Kast.setOutput(function (s) {
-      output.innerText += s;
-    });
-
-    function run() {
-      output.innerText = "";
-      Kast.run(window.editor.getValue());
-    }
-
-    function shareCode() {
-      const currentUrl = new URL(window.location.href);
-      currentUrl.searchParams.set('code', window.editor.getValue());
-      const shareUrl = currentUrl.toString();
-
-      // Copy to clipboard
-      navigator.clipboard.writeText(shareUrl).then(() => alert('Copied to clipboard')).catch(err => {
-        console.error(err);
-        // Fallback for older browsers
-        const textarea = document.createElement('textarea');
-        textarea.value = shareUrl;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-        alert('Copied to clipboard');
-      });
-      window.history.pushState({}, '', currentUrl);
-    }
-
-    // TODO move this somewhere else
-    require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.0/min/vs' } });
-    require(['vs/editor/editor.main'], function () {
-      window.editor = monaco.editor.create(document.getElementById('editor'), {
-        value: getCodeFromUrl(),
-        language: 'kast'
-      });
-    });
-
-    document.getElementById("share-button").addEventListener("click", shareCode)
-    document.getElementById("run-button").addEventListener("click", run);
-  </script>
+  <script type="module" src="/src/main.ts"></script>
 </body>
 
 </html>
