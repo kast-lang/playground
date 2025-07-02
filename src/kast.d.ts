@@ -6,27 +6,13 @@ namespace Kast {
 
     declare interface Lsp {
         format(state: ProcessedFileState):
-            TextEdit[] | null
+            import('vscode-languageserver-types').TextEdit[] | null
         hover(pos: Position, state: ProcessedFileState):
-            Hover | null
+            import('vscode-languageserver-types').Hover | null
         rename(pos: Position, newName: string, state: ProcessedFileState):
             import('vscode-languageserver-types').WorkspaceEdit | null
-    }
-    declare interface Hover {
-        contents: string;
-        range: Range;
-    }
-    declare interface Position {
-        line: number;
-        character: number;
-    }
-    declare interface Range {
-        start: Position;
-        end: Position;
-    }
-    declare interface TextEdit {
-        newText: string;
-        range: Range;
+        prepareRename(pos: Position, state: ProcessedFileState):
+            import('vscode-languageserver-types').Range | null
     }
 }
 

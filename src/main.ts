@@ -181,11 +181,11 @@ monaco.languages.registerDocumentSemanticTokensProvider(
         },
     });
 
-function to_kast_position(pos: monaco.Position): Kast.Position {
+function to_kast_position(pos: monaco.Position): lsp.Position {
     return { line: pos.lineNumber - 1, character: pos.column - 1 }
 }
 
-function from_kast_range(range: Kast.Range): monaco.IRange {
+function from_kast_range(range: lsp.Range): monaco.IRange {
     return {
         startLineNumber: range.start.line + 1,
         startColumn: range.start.character + 1,
@@ -194,7 +194,7 @@ function from_kast_range(range: Kast.Range): monaco.IRange {
     };
 }
 
-function from_kast_text_edit({ newText, range }: Kast.TextEdit): monaco.languages.TextEdit {
+function from_kast_text_edit({ newText, range }: lsp.TextEdit): monaco.languages.TextEdit {
     return {
         range: from_kast_range(range),
         text: newText,
@@ -230,13 +230,17 @@ monaco.languages.registerDocumentFormattingEditProvider(
 
 monaco.languages.registerHoverProvider('kast',
     {
-        provideHover(model, position, token, context) {
+        provideHover(model, position, token, context): monaco.languages.Hover | null {
             const result = Kast.lsp.hover(to_kast_position(position), find_state(model));
             if (result == null) return null;
+            let value;
+            if (typeof result.contents === "string") {
+                value = result.contents
+            } else { throw "todo" }
             return {
-                contents: [{ value: result.contents }],
-                range: from_kast_range(result.range),
-            }
+                contents: [{ value }],
+                range: from_kast_range(result.range!),
+            };
         },
     }
 );
@@ -248,9 +252,17 @@ monaco.languages.registerRenameProvider('kast', {
         if (result == null) return null;
         return from_kast_workspace_edit(result);
     },
-    // resolveRenameLocation(model, position, token) {
-
-    // },
+    resolveRenameLocation(model, position, token): monaco.languages.RenameLocation | null {
+        const result = Kast.lsp.prepareRename(to_kast_position(position), find_state(model));
+        console.log(result);
+        if (result == null) throw "not renamable";
+        const range = from_kast_range(result);
+        const text = model.getValueInRange(range);
+        return {
+            range,
+            text,
+        }
+    },
 });
 
 const editor = monaco.editor.create(document.getElementById('editor')!, {
