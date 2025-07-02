@@ -1,11 +1,16 @@
 /// <reference types="monaco-editor" />
+/// <reference types="vscode-languageserver-types" />
 
 namespace Kast {
     declare interface ProcessedFileState { }
 
     declare interface Lsp {
-        format(state: ProcessedFileState): TextEdit[] | null
-        hover(pos: Position, state: ProcessedFileState): Hover | null
+        format(state: ProcessedFileState):
+            TextEdit[] | null
+        hover(pos: Position, state: ProcessedFileState):
+            Hover | null
+        rename(pos: Position, newName: string, state: ProcessedFileState):
+            import('vscode-languageserver-types').WorkspaceEdit | null
     }
     declare interface Hover {
         contents: string;

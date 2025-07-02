@@ -1,6 +1,7 @@
 import './style.css'
 
 import * as monaco from 'monaco-editor'
+import * as lsp from 'vscode-languageserver-types'
 
 const KAST_JS = (import.meta.env.PROD)
     ? "https://kast-lang.github.io/kast/kast_js.bc.js"
@@ -141,13 +142,28 @@ monaco.languages.setLanguageConfiguration('kast',
 
 const originalSource = getCodeFromUrl();
 
-function process(source: string): Kast.ProcessedFileState {
-    return Kast.processFile("file", source);
+function process(uri: monaco.Uri, source: string): Kast.ProcessedFileState {
+    return Kast.processFile(uri.toString(), source);
 }
 
-let state: Kast.ProcessedFileState = process(originalSource);
-function updateState(source: string) {
-    state = process(source);
+let uri_from_str: { [index: string]: monaco.Uri } = {};
+let singleFileUri: monaco.Uri | null = null;
+
+function find_uri(_uri: string): monaco.Uri {
+    return singleFileUri!;
+}
+
+let file_states: { [index: string]: Kast.ProcessedFileState } = {}
+function updateState(model: monaco.editor.ITextModel) {
+    const uri = model.uri;
+    singleFileUri = uri;
+    uri_from_str[uri.toString()] = uri;
+    file_states[uri.toString()] = process(uri, model.getValue());
+}
+
+function find_state(model: monaco.editor.ITextModel): Kast.ProcessedFileState {
+    const result = file_states[model.uri.toString()];
+    return result;
 }
 
 monaco.languages.registerDocumentSemanticTokensProvider(
@@ -157,7 +173,8 @@ monaco.languages.registerDocumentSemanticTokensProvider(
             return Kast.semanticTokensProvider.getLegend();
         },
         provideDocumentSemanticTokens(model, lastResultId, token) {
-            return Kast.semanticTokensProvider.provideSemanticTokens(state);
+            return Kast.semanticTokensProvider.provideSemanticTokens(
+                find_state(model));
         },
         releaseDocumentSemanticTokens(resultId) {
 
@@ -177,16 +194,36 @@ function from_kast_range(range: Kast.Range): monaco.IRange {
     };
 }
 
+function from_kast_text_edit({ newText, range }: Kast.TextEdit): monaco.languages.TextEdit {
+    return {
+        range: from_kast_range(range),
+        text: newText,
+    };
+}
+
+function from_kast_workspace_edit(edit: lsp.WorkspaceEdit): monaco.languages.WorkspaceEdit {
+    const result = {
+        edits: Object.keys(edit.changes!).flatMap(uri => {
+            const resource = find_uri(uri);
+            return edit.changes![uri].map(edit => ({
+                resource,
+                textEdit: from_kast_text_edit(edit),
+                versionId: undefined,
+            }));
+        }
+        )
+    };
+    console.log(result);
+    return result;
+}
+
 monaco.languages.registerDocumentFormattingEditProvider(
     'kast',
     {
         provideDocumentFormattingEdits(model, options, token) {
-            const result = Kast.lsp.format(state);
+            const result = Kast.lsp.format(find_state(model));
             if (result == null) return null;
-            return result.map(({ newText, range }) => ({
-                range: from_kast_range(range),
-                text: newText,
-            }));
+            return result.map(from_kast_text_edit);
         },
     }
 );
@@ -194,7 +231,7 @@ monaco.languages.registerDocumentFormattingEditProvider(
 monaco.languages.registerHoverProvider('kast',
     {
         provideHover(model, position, token, context) {
-            const result = Kast.lsp.hover(to_kast_position(position), state);
+            const result = Kast.lsp.hover(to_kast_position(position), find_state(model));
             if (result == null) return null;
             return {
                 contents: [{ value: result.contents }],
@@ -202,7 +239,19 @@ monaco.languages.registerHoverProvider('kast',
             }
         },
     }
-)
+);
+
+monaco.languages.registerRenameProvider('kast', {
+    provideRenameEdits(model, position, newName, token) {
+        const result = Kast.lsp.rename(to_kast_position(position), newName, find_state(model));
+        console.log(result);
+        if (result == null) return null;
+        return from_kast_workspace_edit(result);
+    },
+    // resolveRenameLocation(model, position, token) {
+
+    // },
+});
 
 const editor = monaco.editor.create(document.getElementById('editor')!, {
     value: originalSource,
@@ -210,8 +259,10 @@ const editor = monaco.editor.create(document.getElementById('editor')!, {
     "semanticHighlighting.enabled": true,
     hover: { enabled: true },
 });
+
+updateState(editor.getModel()!);
 editor.getModel()?.onDidChangeContent(function (event) {
-    updateState(editor.getValue());
+    updateState(editor.getModel()!);
 });
 
 document.getElementById("format-button")?.addEventListener("click", function () {

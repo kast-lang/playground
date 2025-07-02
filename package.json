@@ -13,6 +13,7 @@
     "vite": "^7.0.0"
   },
   "dependencies": {
-    "monaco-editor": "^0.52.2"
+    "monaco-editor": "^0.52.2",
+    "vscode-languageserver-types": "^3.17.5"
   }
 }
