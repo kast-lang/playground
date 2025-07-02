@@ -141,11 +141,11 @@ monaco.languages.setLanguageConfiguration('kast',
 
 const originalSource = getCodeFromUrl();
 
-function process(source: string): ProcessedFileState {
+function process(source: string): Kast.ProcessedFileState {
     return Kast.processFile("file", source);
 }
 
-let state: ProcessedFileState = process(originalSource);
+let state: Kast.ProcessedFileState = process(originalSource);
 function updateState(source: string) {
     state = process(source);
 }
@@ -164,6 +164,25 @@ monaco.languages.registerDocumentSemanticTokensProvider(
         },
     });
 
+monaco.languages.registerDocumentFormattingEditProvider(
+    'kast',
+    {
+        provideDocumentFormattingEdits(model, options, token) {
+            const result = Kast.lsp.format(state);
+            if (result == null) return null;
+            return result.map(({ newText, range }) => ({
+                range: {
+                    startLineNumber: range.start.line,
+                    startColumn: range.start.character,
+                    endLineNumber: range.end.line,
+                    endColumn: range.end.character,
+                },
+                text: newText,
+            }));
+        },
+    }
+)
+
 const editor = monaco.editor.create(document.getElementById('editor')!, {
     value: originalSource,
     language: 'kast',
@@ -171,6 +190,10 @@ const editor = monaco.editor.create(document.getElementById('editor')!, {
 });
 editor.getModel()?.onDidChangeContent(function (event) {
     updateState(editor.getValue());
+});
+
+document.getElementById("format-button")?.addEventListener("click", function () {
+    editor.getAction('editor.action.formatDocument')!.run();
 });
 
 const output = document.getElementById("output")!;
