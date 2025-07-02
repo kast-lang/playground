@@ -43,8 +43,14 @@
         DEFAULT_SOURCE;
     }
 
+    const output = document.getElementById("output");
+    Kast.setOutput(function (s) {
+      output.innerText += s;
+    });
+
     function run() {
-      Kast.eval(window.editor.getValue());
+      output.innerText = "";
+      Kast.run(window.editor.getValue());
     }
 
     function shareCode() {
