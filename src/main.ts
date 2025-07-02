@@ -182,7 +182,10 @@ monaco.languages.registerDocumentSemanticTokensProvider(
     });
 
 function to_kast_position(pos: monaco.Position): lsp.Position {
-    return { line: pos.lineNumber - 1, character: pos.column - 1 }
+    return { line: pos.lineNumber - 1, character: pos.column - 1 };
+}
+function from_kast_position(pos: lsp.Position): monaco.IPosition {
+    return { lineNumber: pos.line + 1, column: pos.character + 1 };
 }
 
 function from_kast_range(range: lsp.Range): monaco.IRange {
@@ -222,6 +225,22 @@ function from_kast_workspace_edit(edit: lsp.WorkspaceEdit): monaco.languages.Wor
     };
     console.log(result);
     return result;
+}
+
+function from_kast_inlay_hint(hint: lsp.InlayHint): monaco.languages.InlayHint {
+    let label;
+    if (typeof hint.label === "string") {
+        label = hint.label;
+    } else {
+        throw "todo"
+    }
+    return {
+        label,
+        position: from_kast_position(hint.position),
+        paddingLeft: hint.paddingLeft,
+        paddingRight: hint.paddingRight,
+        // TODO other fields
+    }
 }
 
 monaco.languages.registerDocumentFormattingEditProvider(
@@ -276,12 +295,26 @@ monaco.languages.registerDefinitionProvider('kast',
     {
         provideDefinition(model, position, token): monaco.languages.Definition | monaco.languages.LocationLink[] | null {
             const result = Kast.lsp.findDefinition(to_kast_position(position), find_state(model));
-            console.log(result);
             if (result == null) return null;
             return result.map(from_kast_location);
         },
     }
-)
+);
+
+monaco.languages.registerInlayHintsProvider('kast',
+    {
+        provideInlayHints(model, range, token): monaco.languages.InlayHintList | null {
+            const result = Kast.lsp.inlayHints(find_state(model));
+            if (result == null) return null;
+            return {
+                hints: result.map(from_kast_inlay_hint),
+                dispose() {
+                    // TODO maybe
+                }
+            };
+        },
+    }
+);
 
 const editor = monaco.editor.create(document.getElementById('editor')!, {
     value: originalSource,
