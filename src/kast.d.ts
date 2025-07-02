@@ -13,6 +13,8 @@ namespace Kast {
             import('vscode-languageserver-types').WorkspaceEdit | null
         prepareRename(pos: Position, state: ProcessedFileState):
             import('vscode-languageserver-types').Range | null
+        findDefinition(pos: Position, state: ProcessedFileState):
+            import('vscode-languageserver-types').Location[] | null
     }
 }
 

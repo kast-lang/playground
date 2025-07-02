@@ -201,6 +201,13 @@ function from_kast_text_edit({ newText, range }: lsp.TextEdit): monaco.languages
     };
 }
 
+function from_kast_location({ uri, range }: lsp.Location): monaco.languages.Location {
+    return {
+        uri: find_uri(uri),
+        range: from_kast_range(range),
+    }
+}
+
 function from_kast_workspace_edit(edit: lsp.WorkspaceEdit): monaco.languages.WorkspaceEdit {
     const result = {
         edits: Object.keys(edit.changes!).flatMap(uri => {
@@ -264,6 +271,17 @@ monaco.languages.registerRenameProvider('kast', {
         }
     },
 });
+
+monaco.languages.registerDefinitionProvider('kast',
+    {
+        provideDefinition(model, position, token): monaco.languages.Definition | monaco.languages.LocationLink[] | null {
+            const result = Kast.lsp.findDefinition(to_kast_position(position), find_state(model));
+            console.log(result);
+            if (result == null) return null;
+            return result.map(from_kast_location);
+        },
+    }
+)
 
 const editor = monaco.editor.create(document.getElementById('editor')!, {
     value: originalSource,
