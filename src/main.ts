@@ -8,8 +8,8 @@ const KAST_JS = (import.meta.env.PROD)
 await import(KAST_JS)
 
 const DEFAULT_SOURCE = [
-    'use std.*;',
-    '',
+    // 'use std.*;',
+    // '',
     'print "hello, world";'
 ].join('\n');
 
@@ -30,14 +30,148 @@ function getCodeFromUrl() {
         DEFAULT_SOURCE;
 }
 
-
-
-// TODO move this somewhere else
-const editor = monaco.editor.create(document.getElementById('editor')!, {
-    value: getCodeFromUrl(),
-    language: 'kast'
+monaco.languages.register({
+    id: "kast",
+    extensions: [".ks"],
+    filenames: undefined,
+    filenamePatterns: undefined,
+    firstLine: undefined,
+    aliases: [
+        "Kast",
+        "kast"
+    ],
+    mimetypes: undefined,
 });
 
+// let configuration;
+// {
+//     const response = await fetch("https://raw.githubusercontent.com/kast-lang/vscode-ext/refs/heads/main/language-configuration.json");
+//     configuration = await response.json();
+// }
+monaco.languages.setLanguageConfiguration('kast',
+    {
+        "comments": {
+            // symbol used for single line comment. Remove this entry if your language does not support line comments
+            "lineComment": "#",
+            // symbols used for start and end a block comment. Remove this entry if your language does not support block comments
+            "blockComment": [
+                "(#",
+                "#)"
+            ]
+        },
+        // symbols used as brackets
+        "brackets": [
+            [
+                "{",
+                "}"
+            ],
+            [
+                "[",
+                "]"
+            ],
+            [
+                "(",
+                ")"
+            ]
+        ],
+        // symbols that are auto closed when typing
+        "autoClosingPairs": [
+            {
+                "open": "{",
+                "close": "}",
+                "notIn": [
+                    "string",
+                    "comment"
+                ],
+            },
+            {
+                "open": "[",
+                "close": "]",
+                "notIn": [
+                    "string",
+                    "comment"
+                ],
+            },
+            {
+                "open": "(",
+                "close": ")",
+                "notIn": [
+                    "string",
+                    "comment"
+                ],
+            }
+        ],
+        // symbols that can be used to surround a selection
+        "surroundingPairs": [
+            {
+                open: "{",
+                close: "}",
+            },
+            {
+                open: "[",
+                close: "]",
+            },
+            {
+                open: "(",
+                close: ")",
+            },
+            {
+                open: "\"",
+                close: "\"",
+            },
+            {
+                open: "'",
+                close: "'",
+            },
+        ],
+    }
+);
+
+// monaco.languages.setMonarchTokensProvider('kast', {
+//     tokenizer: {
+//         root: [
+//             [/[a-z_$][\w$]*/, 'identifier'],
+//             [/\d+/, 'number'],
+//             [/".*?"/, 'string'],
+//             [/[{}()\[\]]/, '@brackets'],
+//             [/\/\/.*/, 'comment'],
+//         ],
+//     },
+// });
+
+const originalSource = getCodeFromUrl();
+
+function process(source: string): ProcessedFileState {
+    return Kast.processFile("file", source);
+}
+
+let state: ProcessedFileState = process(originalSource);
+function updateState(source: string) {
+    state = process(source);
+}
+
+monaco.languages.registerDocumentSemanticTokensProvider(
+    'kast',
+    {
+        getLegend() {
+            return Kast.semanticTokensProvider.getLegend();
+        },
+        provideDocumentSemanticTokens(model, lastResultId, token) {
+            return Kast.semanticTokensProvider.provideSemanticTokens(state);
+        },
+        releaseDocumentSemanticTokens(resultId) {
+
+        },
+    });
+
+const editor = monaco.editor.create(document.getElementById('editor')!, {
+    value: originalSource,
+    language: 'kast',
+    "semanticHighlighting.enabled": true,
+});
+editor.getModel()?.onDidChangeContent(function (event) {
+    updateState(editor.getValue());
+});
 
 const output = document.getElementById("output")!;
 Kast.setOutput(function (s) {
