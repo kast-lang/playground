@@ -5,6 +5,11 @@ namespace Kast {
 
     declare interface Lsp {
         format(state: ProcessedFileState): TextEdit[] | null
+        hover(pos: Position, state: ProcessedFileState): Hover | null
+    }
+    declare interface Hover {
+        contents: string;
+        range: Range;
     }
     declare interface Position {
         line: number;

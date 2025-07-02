@@ -164,6 +164,19 @@ monaco.languages.registerDocumentSemanticTokensProvider(
         },
     });
 
+function to_kast_position(pos: monaco.Position): Kast.Position {
+    return { line: pos.lineNumber - 1, character: pos.column - 1 }
+}
+
+function from_kast_range(range: Kast.Range): monaco.IRange {
+    return {
+        startLineNumber: range.start.line + 1,
+        startColumn: range.start.character + 1,
+        endLineNumber: range.end.line + 1,
+        endColumn: range.end.character + 1,
+    };
+}
+
 monaco.languages.registerDocumentFormattingEditProvider(
     'kast',
     {
@@ -171,14 +184,22 @@ monaco.languages.registerDocumentFormattingEditProvider(
             const result = Kast.lsp.format(state);
             if (result == null) return null;
             return result.map(({ newText, range }) => ({
-                range: {
-                    startLineNumber: range.start.line,
-                    startColumn: range.start.character,
-                    endLineNumber: range.end.line,
-                    endColumn: range.end.character,
-                },
+                range: from_kast_range(range),
                 text: newText,
             }));
+        },
+    }
+);
+
+monaco.languages.registerHoverProvider('kast',
+    {
+        provideHover(model, position, token, context) {
+            const result = Kast.lsp.hover(to_kast_position(position), state);
+            if (result == null) return null;
+            return {
+                contents: [{ value: result.contents }],
+                range: from_kast_range(result.range),
+            }
         },
     }
 )
@@ -187,6 +208,7 @@ const editor = monaco.editor.create(document.getElementById('editor')!, {
     value: originalSource,
     language: 'kast',
     "semanticHighlighting.enabled": true,
+    hover: { enabled: true },
 });
 editor.getModel()?.onDidChangeContent(function (event) {
     updateState(editor.getValue());
