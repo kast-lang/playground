@@ -11,7 +11,7 @@ await import(KAST_JS)
 const DEFAULT_SOURCE = [
     // 'use std.*;',
     // '',
-    'print "hello, world";'
+    'std.io.print "Hello, World!";'
 ].join('\n');
 
 function getCodeFromUrl() {
