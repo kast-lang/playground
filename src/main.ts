@@ -300,11 +300,17 @@ monaco.languages.registerInlayHintsProvider('kast', {
     },
 });
 
+import '@fontsource/monaspace-neon/index.css';
+await document.fonts.load("16px 'Monaspace Neon'");
+
 const editor = monaco.editor.create(document.getElementById('editor')!, {
     value: originalSource,
     language: 'kast',
     'semanticHighlighting.enabled': true,
     hover: { enabled: true },
+    fontFamily: 'Monaspace Neon, monospace',
+    fontLigatures:
+        "'calt', 'ss01', 'ss02', 'ss03', 'ss04', 'ss05', 'ss06', 'ss07', 'ss08', 'ss09', 'liga'",
 });
 
 kastWorker.diantostics_handler = (uri, diagnostics) => {
