@@ -25,3 +25,5 @@ dist-ssr
 
 /.direnv/
 /public/kast_js.bc.js
+
+.env
