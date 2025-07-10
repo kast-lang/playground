@@ -45,7 +45,7 @@ app.post('/share', async (req: Request, res: Response) => {
             },
         );
 
-        return res.json({ url: gist.data.html_url });
+        return res.json({ url: gist.data.html_url, id: gist.data.id });
     } catch (err: any) {
         console.error(err.response?.data || err.message);
         return res.status(500).json({ error: 'Failed to create gist' });

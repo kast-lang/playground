@@ -8,25 +8,22 @@ const kastWorker = await KastWorker.init();
 
 import defaultSource from './default-source.ks?raw';
 
-function getCodeFromUrl() {
-    const codeParam = new URLSearchParams(window.location.search).get('code');
-    return codeParam
-        ? decodeURIComponent(codeParam).replace(
-              /\\([nrtbfv'"\\])/g,
-              (match, escapeChar: string) =>
-                  ({
-                      n: '\n',
-                      r: '\r',
-                      t: '\t',
-                      b: '\b',
-                      f: '\f',
-                      v: '\v',
-                      "'": "'",
-                      '"': '"',
-                      '\\': '\\',
-                  })[escapeChar] || match,
-          )
-        : defaultSource;
+async function loadGistFromQuery(): Promise<string | null> {
+    const params = new URLSearchParams(window.location.search);
+    const gistId = params.get('gist');
+    if (!gistId) return null;
+
+    try {
+        const res = await fetch(`https://api.github.com/gists/${gistId}`);
+        const data = await res.json();
+        const files = data.files;
+
+        // Pick the first file in the gist
+        return (Object.values(files) as any)[0].content;
+    } catch (err) {
+        console.error('Gist loading failed:', err);
+        return null;
+    }
 }
 
 monaco.languages.register({
@@ -111,8 +108,6 @@ monaco.languages.setLanguageConfiguration('kast', {
 //         ],
 //     },
 // });
-
-const originalSource = getCodeFromUrl();
 
 const semanticTokensLegend = await kastWorker.getSemanticTokensLegend();
 
@@ -304,7 +299,7 @@ import '@fontsource/monaspace-neon/index.css';
 await document.fonts.load("16px 'Monaspace Neon'");
 
 const editor = monaco.editor.create(document.getElementById('editor')!, {
-    value: originalSource,
+    value: (await loadGistFromQuery()) ?? defaultSource,
     language: 'kast',
     'semanticHighlighting.enabled': true,
     hover: { enabled: true },
@@ -415,7 +410,7 @@ async function shareCode() {
 
         const data = await res.json();
 
-        shareResult.innerHTML = `Shared! 👉 <a href="${data.url}" target="_blank">${data.url}</a>`;
+        shareResult.innerHTML = `Shared! <a href="?gist=${data.id}" target="_blank">Permalink to playground</a>`;
     } catch (err) {
         console.error(err);
         shareResult.textContent = 'Failed to share code';
