@@ -1,16 +1,16 @@
 #container {
-  display: flex;
+    display: flex;
 }
 
 #editor {
-  width: 800px;
-  height: 600px;
-  border: 1px solid grey
+    width: 800px;
+    height: 600px;
+    border: 1px solid grey;
 }
 
 #output {
-  width: 300px;
-  height: 600px;
-  margin: 0;
-  border: 1px solid grey
+    width: 300px;
+    height: 600px;
+    margin: 0;
+    border: 1px solid grey;
 }
