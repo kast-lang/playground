@@ -2,10 +2,16 @@ import './style.css';
 
 import * as monaco from 'monaco-editor';
 import * as lsp from 'vscode-languageserver-types';
+import * as interop from './worker-interop';
 
 const worker = new Worker(new URL('./worker.ts', import.meta.url), {
     type: 'module',
 });
+
+const KAST_JS = import.meta.env.PROD
+    ? 'https://kast-lang.github.io/kast/kast_js.bc.js'
+    : '../public/kast_js.bc.js';
+await import(KAST_JS);
 
 const DEFAULT_SOURCE = [
     // 'use std.*;',
@@ -119,12 +125,51 @@ monaco.languages.setLanguageConfiguration('kast', {
 
 const originalSource = getCodeFromUrl();
 
-function process(uri: monaco.Uri, source: string): Kast.ProcessedFileState {
-    return Kast.processFile(uri.toString(), source);
+function process(
+    uri: monaco.Uri,
+    source: string,
+): Promise<Kast.ProcessedFileState> {
+    return new Promise((resolve) => {
+        const message: interop.ProcessMessage = {
+            type: 'process',
+            uri: uri.toString(),
+            source,
+        };
+        worker.postMessage(message);
+        worker.onmessage = (event) => {
+            worker.onmessage = null;
+            resolve(event.data);
+        };
+    });
 }
 
 let uri_from_str: { [index: string]: monaco.Uri } = {};
 let singleFileUri: monaco.Uri | null = null;
+
+let current_processing: Promise<void> | null = null;
+let queued_processing: (() => Promise<void>) | null = null;
+
+function start_processing_if_need() {
+    if (current_processing != null) {
+        return;
+    }
+    if (queued_processing == null) {
+        return;
+    }
+    const queued = queued_processing;
+    queued_processing = null;
+    async function queue() {
+        await queued();
+        current_processing = null;
+        start_processing_if_need();
+    }
+    current_processing = queue();
+}
+async function wait_for_all_processing() {
+    while (current_processing != null) {
+        await current_processing;
+    }
+}
 
 function find_uri(_uri: string): monaco.Uri {
     return singleFileUri!;
@@ -135,10 +180,17 @@ function updateState(model: monaco.editor.ITextModel) {
     const uri = model.uri;
     singleFileUri = uri;
     uri_from_str[uri.toString()] = uri;
-    file_states[uri.toString()] = process(uri, model.getValue());
+    async function do_process() {
+        file_states[uri.toString()] = await process(uri, model.getValue());
+    }
+    queued_processing = () => do_process();
+    start_processing_if_need();
 }
 
-function find_state(model: monaco.editor.ITextModel): Kast.ProcessedFileState {
+async function find_state(
+    model: monaco.editor.ITextModel,
+): Promise<Kast.ProcessedFileState> {
+    await wait_for_all_processing();
     const result = file_states[model.uri.toString()];
     return result;
 }
@@ -147,9 +199,9 @@ monaco.languages.registerDocumentSemanticTokensProvider('kast', {
     getLegend() {
         return Kast.semanticTokensProvider.getLegend();
     },
-    provideDocumentSemanticTokens(model, _lastResultId, _token) {
+    async provideDocumentSemanticTokens(model, _lastResultId, _token) {
         return Kast.semanticTokensProvider.provideSemanticTokens(
-            find_state(model),
+            await find_state(model),
         );
     },
     releaseDocumentSemanticTokens(_resultId) {},
@@ -225,23 +277,27 @@ function from_kast_inlay_hint(hint: lsp.InlayHint): monaco.languages.InlayHint {
 }
 
 monaco.languages.registerDocumentFormattingEditProvider('kast', {
-    provideDocumentFormattingEdits(model, _options, _token) {
-        const result = Kast.lsp.format(find_state(model));
+    async provideDocumentFormattingEdits(
+        model,
+        _options,
+        _token,
+    ): Promise<monaco.languages.TextEdit[] | null> {
+        const result = Kast.lsp.format(await find_state(model));
         if (result == null) return null;
         return result.map(from_kast_text_edit);
     },
 });
 
 monaco.languages.registerHoverProvider('kast', {
-    provideHover(
+    async provideHover(
         model,
         position,
         _token,
         _context,
-    ): monaco.languages.Hover | null {
+    ): Promise<monaco.languages.Hover | null> {
         const result = Kast.lsp.hover(
             to_kast_position(position),
-            find_state(model),
+            await find_state(model),
         );
         if (result == null) return null;
         let value;
@@ -258,24 +314,24 @@ monaco.languages.registerHoverProvider('kast', {
 });
 
 monaco.languages.registerRenameProvider('kast', {
-    provideRenameEdits(model, position, newName, _token) {
+    async provideRenameEdits(model, position, newName, _token) {
         const result = Kast.lsp.rename(
             to_kast_position(position),
             newName,
-            find_state(model),
+            await find_state(model),
         );
         console.log(result);
         if (result == null) return null;
         return from_kast_workspace_edit(result);
     },
-    resolveRenameLocation(
+    async resolveRenameLocation(
         model,
         position,
         _token,
-    ): monaco.languages.RenameLocation | null {
+    ): Promise<monaco.languages.RenameLocation | null> {
         const result = Kast.lsp.prepareRename(
             to_kast_position(position),
-            find_state(model),
+            await find_state(model),
         );
         console.log(result);
         if (result == null) throw 'not renamable';
@@ -289,14 +345,16 @@ monaco.languages.registerRenameProvider('kast', {
 });
 
 monaco.languages.registerDefinitionProvider('kast', {
-    provideDefinition(
+    async provideDefinition(
         model,
         position,
         _token,
-    ): monaco.languages.Definition | monaco.languages.LocationLink[] | null {
+    ): Promise<
+        monaco.languages.Definition | monaco.languages.LocationLink[] | null
+    > {
         const result = Kast.lsp.findDefinition(
             to_kast_position(position),
-            find_state(model),
+            await find_state(model),
         );
         if (result == null) return null;
         return result.map(from_kast_location);
@@ -304,12 +362,12 @@ monaco.languages.registerDefinitionProvider('kast', {
 });
 
 monaco.languages.registerInlayHintsProvider('kast', {
-    provideInlayHints(
+    async provideInlayHints(
         model,
         _range,
         _token,
-    ): monaco.languages.InlayHintList | null {
-        const result = Kast.lsp.inlayHints(find_state(model));
+    ): Promise<monaco.languages.InlayHintList | null> {
+        const result = Kast.lsp.inlayHints(await find_state(model));
         if (result == null) return null;
         return {
             hints: result.map(from_kast_inlay_hint),
