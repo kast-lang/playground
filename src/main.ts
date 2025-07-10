@@ -312,6 +312,7 @@ const editor = monaco.editor.create(document.getElementById('editor')!, {
     fontLigatures:
         "'calt', 'ss01', 'ss02', 'ss03', 'ss04', 'ss05', 'ss06', 'ss07', 'ss08', 'ss09', 'liga'",
 });
+monaco.editor.setTheme('vs-dark');
 
 kastWorker.diantostics_handler = (uri, diagnostics) => {
     monaco.editor.setModelMarkers(

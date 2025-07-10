@@ -1,16 +1,57 @@
+body {
+    background-color: #1e1e1e;
+    color: #cccccc;
+    font-family: monospace;
+    margin: 0;
+    padding: 0;
+}
+
+h1 {
+    color: #ffffff;
+    text-align: center;
+    margin: 20px 0;
+}
+
+button {
+    background-color: #333;
+    color: #ddd;
+    border: 1px solid #555;
+    padding: 8px 16px;
+    margin: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+button:hover {
+    background-color: #444;
+}
+
+/* Container setup */
 #container {
     display: flex;
+    height: calc(100vh - 150px);
+    padding: 10px;
+    gap: 10px;
+}
+
+#editor, #output-container {
+    flex: 1;
+    background-color: #1e1e1e;
+    border: 1px solid #444;
+    padding: 10px;
+    /* font-size: 20px; */
+    color: #e0e0e0;
 }
 
 #editor {
-    width: 800px;
-    height: 600px;
-    border: 1px solid grey;
+    overflow: hidden;
+}
+
+#output-container {
+    overflow: scroll;
 }
 
 #output {
-    width: 300px;
-    height: 600px;
     margin: 0;
-    border: 1px solid grey;
 }
