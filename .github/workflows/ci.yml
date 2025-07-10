@@ -16,13 +16,23 @@ jobs:
         uses: actions/setup-node@v4
       - name: Install dependencies
         uses: bahmutov/npm-install@v1
-      - name: Build project
+      - uses: bahmutov/npm-install@v1
+        with:
+          working-directory: backend
+      - name: Build frontend
         run: npm run build
+      - name: Build backend
+        run: npm run build
+        working-directory: backend
+      - run: |
+          mkdir artifacts
+          mv dist artifacts/frontend
+          mv backend/dist artifacts/backend
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist
-          path: ./dist
+          name: artifacts
+          path: ./artifacts
 
   deploy:
     name: Deploy
@@ -37,8 +47,28 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: dist
-          path: ./dist
+          name: artifacts
+          path: ./artifacts
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: dist
+          folder: artifacts/frontend
+      - name: Copy files to VPS
+        uses: appleboy/scp-action@v0.1.6
+        with:
+          host: ${{ secrets.BACKEND_HOST }}
+          username: ${{ secrets.BACKEND_USER }}
+          key: ${{ secrets.BACKEND_SSH_KEY }}
+          source: './artifacts/backend/server.js'
+          target: '/home/${{ secrets.BACKEND_USER }}/playground-backend'
+      - name: Restart backend with systemd --user
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.BACKEND_HOST }}
+          username: ${{ secrets.BACKEND_USER }}
+          key: ${{ secrets.BACKEND_SSH_KEY }}
+          script: |
+            cd /home/${{ secrets.BACKEND_USER }}/playground-backend
+            # Restart systemd user service
+            export XDG_RUNTIME_DIR=/run/user/$(id -u)
+            systemctl --user daemon-reload
+            systemctl --user restart kast-playground-backend
