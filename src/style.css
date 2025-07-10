@@ -35,7 +35,8 @@ button:hover {
     gap: 10px;
 }
 
-#editor, #output-container {
+#editor,
+#output-container {
     flex: 1;
     background-color: #1e1e1e;
     border: 1px solid #444;
@@ -54,4 +55,28 @@ button:hover {
 
 #output {
     margin: 0;
+}
+
+p {
+    padding: 10px;
+}
+
+a {
+    color: #80dfff;
+    /* Soft neon blue */
+    text-decoration: none;
+    transition: color 0.3s ease, border-bottom 0.3s ease;
+    border-bottom: 1px dashed transparent;
+}
+
+a:hover,
+a:focus {
+    color: #00ccff;
+    /* Brighter on hover */
+    border-bottom: 1px dashed #00ccff;
+}
+
+a:visited {
+    color: #b38fff;
+    /* Purple-ish for visited links */
 }
