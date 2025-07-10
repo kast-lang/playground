@@ -28,6 +28,9 @@ namespace Kast {
         inlayHints(
             state: ProcessedFileState,
         ): import('vscode-languageserver-types').InlayHint[] | null;
+        diagnostics(
+            state: ProcessedFileState,
+        ): import('vscode-languageserver-types').Diagnostic[];
     }
 }
 

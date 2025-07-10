@@ -38,7 +38,8 @@ self.onmessage = (event) => {
         case 'updateFile': {
             const processed = Kast.processFile(data.uri, data.contents);
             file_states[data.uri] = processed;
-            respond({ type: 'updateFile' });
+            const diagnostics = Kast.lsp.diagnostics(processed);
+            respond({ type: 'updateFile', diagnostics });
             break;
         }
         case 'format': {

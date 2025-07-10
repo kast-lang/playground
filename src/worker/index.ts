@@ -38,11 +38,16 @@ class FileProcessingState {
 export class KastWorker {
     worker: Worker;
     file_processing: FileProcessingState;
+    diantostics_handler: (
+        uri: string,
+        diagnostics: lsp_types.Diagnostic[],
+    ) => void;
     private constructor() {
         this.file_processing = new FileProcessingState();
         this.worker = new Worker(new URL('./backend.ts', import.meta.url), {
             type: 'module',
         });
+        this.diantostics_handler = () => {};
     }
     static async init(): Promise<KastWorker> {
         const self = new KastWorker();
@@ -83,7 +88,8 @@ export class KastWorker {
     updateFile(uri: string, contents: string) {
         this.file_processing.queue(async () => {
             this.send({ type: 'updateFile', uri, contents });
-            await this.waitFor('updateFile');
+            const response = await this.waitFor('updateFile');
+            this.diantostics_handler(uri, response.diagnostics);
         });
     }
 

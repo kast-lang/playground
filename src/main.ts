@@ -308,6 +308,43 @@ const editor = monaco.editor.create(document.getElementById('editor')!, {
     hover: { enabled: true },
 });
 
+kastWorker.diantostics_handler = (uri, diagnostics) => {
+    monaco.editor.setModelMarkers(
+        editor.getModel()!,
+        'kast',
+        diagnostics.map((diagnostic) => {
+            const range = from_kast_range(diagnostic.range);
+            let severity: monaco.MarkerSeverity | null = null;
+            switch (diagnostic.severity) {
+                case 1:
+                    severity = monaco.MarkerSeverity.Error;
+                    break;
+                case 2:
+                    severity = monaco.MarkerSeverity.Warning;
+                    break;
+                case 3:
+                    severity = monaco.MarkerSeverity.Info;
+                    break;
+                case 4:
+                    severity = monaco.MarkerSeverity.Hint;
+                    break;
+                case null:
+                    severity = monaco.MarkerSeverity.Error;
+                    break;
+            }
+            return {
+                startLineNumber: range.startLineNumber,
+                startColumn: range.startColumn,
+                endLineNumber: range.endLineNumber,
+                endColumn: range.endColumn,
+                message: diagnostic.message,
+                severity: severity!,
+            };
+        }),
+    );
+    console.log(uri, diagnostics);
+};
+
 function updateState(model: monaco.editor.ITextModel) {
     kastWorker.updateFile(model.uri.toString(), model.getValue());
 }

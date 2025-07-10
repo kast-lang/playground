@@ -96,6 +96,7 @@ export interface UpdateFileRequest {
 
 export interface UpdateFileResponse {
     type: 'updateFile';
+    diagnostics: lsp_types.Diagnostic[];
 }
 
 export interface RunRequest {
