@@ -3,35 +3,11 @@ import './style.css';
 import * as monaco from 'monaco-editor';
 import * as lsp from 'vscode-languageserver-types';
 import * as interop from './worker-interop';
+import { KastWorker } from './worker';
 
-function awaitWorkerInit(worker: Worker): Promise<void> {
-    return new Promise(
-        (resolve) =>
-            (worker.onmessage = (event) => {
-                console.log(event.data);
-                if (event.data.type === 'init') {
-                    worker.onmessage = null;
-                    resolve();
-                }
-            }),
-    );
-}
+const kastWorker = await KastWorker.init();
 
-const lspWorker = new Worker(new URL('./lsp-worker.ts', import.meta.url), {
-    type: 'module',
-});
-awaitWorkerInit(lspWorker);
-
-const KAST_JS = import.meta.env.PROD
-    ? 'https://kast-lang.github.io/kast/kast_js.bc.js'
-    : '../public/kast_js.bc.js';
-await import(KAST_JS);
-
-const DEFAULT_SOURCE = [
-    // 'use std.*;',
-    // '',
-    'std.io.print "Hello, World!";',
-].join('\n');
+import defaultSource from './default-source.ks?raw';
 
 function getCodeFromUrl() {
     const codeParam = new URLSearchParams(window.location.search).get('code');
@@ -51,7 +27,7 @@ function getCodeFromUrl() {
                       '\\': '\\',
                   })[escapeChar] || match,
           )
-        : DEFAULT_SOURCE;
+        : defaultSource;
 }
 
 monaco.languages.register({
@@ -139,84 +115,17 @@ monaco.languages.setLanguageConfiguration('kast', {
 
 const originalSource = getCodeFromUrl();
 
-function process(
-    uri: monaco.Uri,
-    source: string,
-): Promise<Kast.ProcessedFileState> {
-    return new Promise((resolve) => {
-        const message: interop.ProcessMessage = {
-            type: 'process',
-            uri: uri.toString(),
-            source,
-        };
-        lspWorker.postMessage(message);
-        lspWorker.onmessage = (event) => {
-            lspWorker.onmessage = null;
-            resolve(event.data);
-        };
-    });
-}
-
-let uri_from_str: { [index: string]: monaco.Uri } = {};
-let singleFileUri: monaco.Uri | null = null;
-
-let current_processing: Promise<void> | null = null;
-let queued_processing: (() => Promise<void>) | null = null;
-
-function start_processing_if_need() {
-    if (current_processing != null) {
-        return;
-    }
-    if (queued_processing == null) {
-        return;
-    }
-    const queued = queued_processing;
-    queued_processing = null;
-    async function queue() {
-        await queued();
-        current_processing = null;
-        start_processing_if_need();
-    }
-    current_processing = queue();
-}
-async function wait_for_all_processing() {
-    while (current_processing != null) {
-        await current_processing;
-    }
-}
-
-function find_uri(_uri: string): monaco.Uri {
-    return singleFileUri!;
-}
-
-let file_states: { [index: string]: Kast.ProcessedFileState } = {};
-function updateState(model: monaco.editor.ITextModel) {
-    const uri = model.uri;
-    singleFileUri = uri;
-    uri_from_str[uri.toString()] = uri;
-    async function do_process() {
-        file_states[uri.toString()] = await process(uri, model.getValue());
-    }
-    queued_processing = () => do_process();
-    start_processing_if_need();
-}
-
-async function find_state(
-    model: monaco.editor.ITextModel,
-): Promise<Kast.ProcessedFileState> {
-    await wait_for_all_processing();
-    const result = file_states[model.uri.toString()];
-    return result;
-}
+const semanticTokensLegend = await kastWorker.getSemanticTokensLegend();
 
 monaco.languages.registerDocumentSemanticTokensProvider('kast', {
     getLegend() {
-        return Kast.semanticTokensProvider.getLegend();
+        return semanticTokensLegend;
     },
     async provideDocumentSemanticTokens(model, _lastResultId, _token) {
-        return Kast.semanticTokensProvider.provideSemanticTokens(
-            await find_state(model),
+        const result = await kastWorker.provideSemanticTokens(
+            model.uri.toString(),
         );
+        return result as monaco.languages.SemanticTokens | null;
     },
     releaseDocumentSemanticTokens(_resultId) {},
 });
@@ -252,7 +161,7 @@ function from_kast_location({
     range,
 }: lsp.Location): monaco.languages.Location {
     return {
-        uri: find_uri(uri),
+        uri: monaco.Uri.parse(uri),
         range: from_kast_range(range),
     };
 }
@@ -262,7 +171,7 @@ function from_kast_workspace_edit(
 ): monaco.languages.WorkspaceEdit {
     const result = {
         edits: Object.keys(edit.changes!).flatMap((uri) => {
-            const resource = find_uri(uri);
+            const resource = monaco.Uri.parse(uri);
             return edit.changes![uri].map((edit) => ({
                 resource,
                 textEdit: from_kast_text_edit(edit),
@@ -296,7 +205,7 @@ monaco.languages.registerDocumentFormattingEditProvider('kast', {
         _options,
         _token,
     ): Promise<monaco.languages.TextEdit[] | null> {
-        const result = Kast.lsp.format(await find_state(model));
+        const result = await kastWorker.format(model.uri.toString());
         if (result == null) return null;
         return result.map(from_kast_text_edit);
     },
@@ -309,9 +218,9 @@ monaco.languages.registerHoverProvider('kast', {
         _token,
         _context,
     ): Promise<monaco.languages.Hover | null> {
-        const result = Kast.lsp.hover(
+        const result = await kastWorker.hover(
+            model.uri.toString(),
             to_kast_position(position),
-            await find_state(model),
         );
         if (result == null) return null;
         let value;
@@ -329,10 +238,10 @@ monaco.languages.registerHoverProvider('kast', {
 
 monaco.languages.registerRenameProvider('kast', {
     async provideRenameEdits(model, position, newName, _token) {
-        const result = Kast.lsp.rename(
+        const result = await kastWorker.rename(
+            model.uri.toString(),
             to_kast_position(position),
             newName,
-            await find_state(model),
         );
         console.log(result);
         if (result == null) return null;
@@ -343,9 +252,9 @@ monaco.languages.registerRenameProvider('kast', {
         position,
         _token,
     ): Promise<monaco.languages.RenameLocation | null> {
-        const result = Kast.lsp.prepareRename(
+        const result = await kastWorker.prepareRename(
+            model.uri.toString(),
             to_kast_position(position),
-            await find_state(model),
         );
         console.log(result);
         if (result == null) throw 'not renamable';
@@ -366,9 +275,9 @@ monaco.languages.registerDefinitionProvider('kast', {
     ): Promise<
         monaco.languages.Definition | monaco.languages.LocationLink[] | null
     > {
-        const result = Kast.lsp.findDefinition(
+        const result = await kastWorker.findDefinition(
+            model.uri.toString(),
             to_kast_position(position),
-            await find_state(model),
         );
         if (result == null) return null;
         return result.map(from_kast_location);
@@ -381,7 +290,7 @@ monaco.languages.registerInlayHintsProvider('kast', {
         _range,
         _token,
     ): Promise<monaco.languages.InlayHintList | null> {
-        const result = Kast.lsp.inlayHints(await find_state(model));
+        const result = await kastWorker.inlayHints(model.uri.toString());
         if (result == null) return null;
         return {
             hints: result.map(from_kast_inlay_hint),
@@ -399,6 +308,9 @@ const editor = monaco.editor.create(document.getElementById('editor')!, {
     hover: { enabled: true },
 });
 
+function updateState(model: monaco.editor.ITextModel) {
+    kastWorker.updateFile(model.uri.toString(), model.getValue());
+}
 updateState(editor.getModel()!);
 editor.getModel()?.onDidChangeContent(function (_event) {
     updateState(editor.getModel()!);
@@ -412,32 +324,20 @@ document
 
 const output = document.getElementById('output')!;
 
-let currentRunWorker: Worker | null = null;
-function run() {
+let currentRunWorker: Promise<KastWorker> | null = null;
+async function run() {
     if (currentRunWorker !== null) {
-        currentRunWorker.terminate();
+        (await currentRunWorker).terminate();
     }
     output.innerText = '';
-    currentRunWorker = new Worker(new URL('./run-worker.ts', import.meta.url), {
-        type: 'module',
-    });
-    const worker = currentRunWorker;
-    async function run() {
-        await awaitWorkerInit(worker);
-        worker.onmessage = (event) => {
-            console.log('from run worker:', event.data);
-            if (event.data.type === 'output') {
-                const message: interop.OutputMessage = event.data;
-                output.innerText += message.s;
-            }
-        };
-        const runMessage: interop.RunMessage = {
-            type: 'run',
-            source: editor.getValue(),
-        };
-        worker.postMessage(runMessage);
-    }
-    run();
+    currentRunWorker = KastWorker.init();
+    const worker = await currentRunWorker;
+    const model = editor.getModel()!;
+    await worker.run(
+        model.uri.toString(),
+        model.getValue(),
+        (s) => (output.innerText += s),
+    );
 }
 
 function shareCode() {

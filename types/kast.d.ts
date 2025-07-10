@@ -34,10 +34,10 @@ namespace Kast {
 declare interface Kast {
     lsp: Kast.Lsp;
     semanticTokensProvider: {
-        getLegend(): import('monaco-editor').languages.SemanticTokensLegend;
+        getLegend(): import('vscode-languageserver-types').SemanticTokensLegend;
         provideSemanticTokens(
             state: Kast.ProcessedFileState,
-        ): import('monaco-editor').languages.SemanticTokens | null;
+        ): import('vscode-languageserver-types').SemanticTokens | null;
     };
     setOutput(printString: (s: string) => void);
     run(code: string);
