@@ -299,7 +299,10 @@ import '@fontsource/monaspace-neon/index.css';
 await document.fonts.load("16px 'Monaspace Neon'");
 
 const editor = monaco.editor.create(document.getElementById('editor')!, {
-    value: (await loadGistFromQuery()) ?? defaultSource,
+    value:
+        (await loadGistFromQuery()) ??
+        localStorage.getItem('source') ??
+        defaultSource,
     language: 'kast',
     'semanticHighlighting.enabled': true,
     hover: { enabled: true },
@@ -352,6 +355,7 @@ function updateState(model: monaco.editor.ITextModel) {
 }
 updateState(editor.getModel()!);
 editor.getModel()?.onDidChangeContent(function (_event) {
+    localStorage.setItem('source', editor.getValue());
     updateState(editor.getModel()!);
 });
 
