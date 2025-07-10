@@ -2,7 +2,6 @@ import './style.css';
 
 import * as monaco from 'monaco-editor';
 import * as lsp from 'vscode-languageserver-types';
-import * as interop from './worker-interop';
 import { KastWorker } from './worker';
 
 const kastWorker = await KastWorker.init();
