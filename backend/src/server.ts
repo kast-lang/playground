@@ -2,11 +2,13 @@ import express from 'express';
 import type { Request, Response } from 'express';
 import axios from 'axios';
 import dotenv from 'dotenv';
+const cors = require('cors');
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 if (!GITHUB_TOKEN) {

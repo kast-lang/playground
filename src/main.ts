@@ -383,29 +383,45 @@ async function run() {
         (s) => (output.innerText += s),
     );
 }
-
-function shareCode() {
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('code', editor.getValue());
-    const shareUrl = currentUrl.toString();
-
-    // Copy to clipboard
-    navigator.clipboard
-        .writeText(shareUrl)
-        .then(() => alert('Copied to clipboard'))
-        .catch((err) => {
-            console.error(err);
-            // Fallback for older browsers
-            const textarea = document.createElement('textarea');
-            textarea.value = shareUrl;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            alert('Copied to clipboard');
-        });
-    window.history.pushState({}, '', currentUrl);
-}
-
-document.getElementById('share-button')!.addEventListener('click', shareCode);
 document.getElementById('run-button')!.addEventListener('click', run);
+
+const shareResult = document.getElementById('share-result')!;
+const shareButton = document.getElementById(
+    'share-button',
+) as HTMLButtonElement;
+async function shareCode() {
+    const code = editor.getValue();
+
+    if (!code.trim()) {
+        shareResult.textContent = 'Code is empty!';
+        return;
+    }
+    const oldButtonText = shareButton.textContent;
+    shareButton.disabled = true;
+    shareButton.textContent = 'Sharing...';
+    try {
+        const res = await fetch(
+            import.meta.env.PROD
+                ? 'https://backend.play.kast-lang.org/share'
+                : 'http://localhost:3000/share',
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code, filename: 'main.kast' }),
+            },
+        );
+
+        if (!res.ok) throw new Error('Server error');
+
+        const data = await res.json();
+
+        shareResult.innerHTML = `Shared! 👉 <a href="${data.url}" target="_blank">${data.url}</a>`;
+    } catch (err) {
+        console.error(err);
+        shareResult.textContent = 'Failed to share code';
+    } finally {
+        shareButton.disabled = false;
+        shareButton.textContent = oldButtonText;
+    }
+}
+shareButton.addEventListener('click', shareCode);
