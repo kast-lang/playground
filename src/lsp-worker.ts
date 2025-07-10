@@ -7,12 +7,15 @@ await import(KAST_JS);
 
 console.log('Worker starting...');
 
-self.onmessage = (message) => {
-    console.log('worker received:', message);
-    if (message.data.type === 'process') {
-        const data = message.data as interop.ProcessMessage;
+self.onmessage = (event) => {
+    console.log('worker received:', event.data);
+    if (event.data.type === 'process') {
+        const data = event.data as interop.ProcessMessage;
         const reply = Kast.processFile(data.uri, data.source);
         console.log('worker reply:', reply);
         self.postMessage(reply);
     }
 };
+
+const initMessage: interop.WorkerInitMessage = { type: 'init' };
+self.postMessage(initMessage);

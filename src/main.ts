@@ -4,9 +4,23 @@ import * as monaco from 'monaco-editor';
 import * as lsp from 'vscode-languageserver-types';
 import * as interop from './worker-interop';
 
-const worker = new Worker(new URL('./worker.ts', import.meta.url), {
+function awaitWorkerInit(worker: Worker): Promise<void> {
+    return new Promise(
+        (resolve) =>
+            (worker.onmessage = (event) => {
+                console.log(event.data);
+                if (event.data.type === 'init') {
+                    worker.onmessage = null;
+                    resolve();
+                }
+            }),
+    );
+}
+
+const lspWorker = new Worker(new URL('./lsp-worker.ts', import.meta.url), {
     type: 'module',
 });
+awaitWorkerInit(lspWorker);
 
 const KAST_JS = import.meta.env.PROD
     ? 'https://kast-lang.github.io/kast/kast_js.bc.js'
@@ -135,9 +149,9 @@ function process(
             uri: uri.toString(),
             source,
         };
-        worker.postMessage(message);
-        worker.onmessage = (event) => {
-            worker.onmessage = null;
+        lspWorker.postMessage(message);
+        lspWorker.onmessage = (event) => {
+            lspWorker.onmessage = null;
             resolve(event.data);
         };
     });
@@ -397,13 +411,33 @@ document
     });
 
 const output = document.getElementById('output')!;
-Kast.setOutput(function (s) {
-    output.innerText += s;
-});
 
+let currentRunWorker: Worker | null = null;
 function run() {
+    if (currentRunWorker !== null) {
+        currentRunWorker.terminate();
+    }
     output.innerText = '';
-    Kast.run(editor.getValue());
+    currentRunWorker = new Worker(new URL('./run-worker.ts', import.meta.url), {
+        type: 'module',
+    });
+    const worker = currentRunWorker;
+    async function run() {
+        await awaitWorkerInit(worker);
+        worker.onmessage = (event) => {
+            console.log('from run worker:', event.data);
+            if (event.data.type === 'output') {
+                const message: interop.OutputMessage = event.data;
+                output.innerText += message.s;
+            }
+        };
+        const runMessage: interop.RunMessage = {
+            type: 'run',
+            source: editor.getValue(),
+        };
+        worker.postMessage(runMessage);
+    }
+    run();
 }
 
 function shareCode() {
