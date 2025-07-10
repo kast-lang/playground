@@ -53,15 +53,15 @@ jobs:
         with:
           folder: artifacts/frontend
       - name: Copy files to VPS
-        uses: appleboy/scp-action@v0.1.6
+        uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.BACKEND_HOST }}
           username: ${{ secrets.BACKEND_USER }}
           key: ${{ secrets.BACKEND_SSH_KEY }}
           source: './artifacts/backend/server.js'
-          target: '/home/${{ secrets.BACKEND_USER }}/playground-backend'
+          target: '/home/${{ secrets.BACKEND_USER }}/playground-backend/server.js'
       - name: Restart backend with systemd --user
-        uses: appleboy/ssh-action@v0.1.6
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.BACKEND_HOST }}
           username: ${{ secrets.BACKEND_USER }}
