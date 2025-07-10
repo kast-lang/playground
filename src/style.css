@@ -46,7 +46,7 @@ button:hover {
 }
 
 #editor {
-    overflow: hidden;
+    overflow: visible;
 }
 
 #output-container {
