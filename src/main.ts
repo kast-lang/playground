@@ -311,6 +311,7 @@ const editor = monaco.editor.create(document.getElementById('editor')!, {
     fontFamily: 'Monaspace Neon, monospace',
     fontLigatures:
         "'calt', 'ss01', 'ss02', 'ss03', 'ss04', 'ss05', 'ss06', 'ss07', 'ss08', 'ss09', 'liga'",
+    automaticLayout: true,
 });
 monaco.editor.setTheme('vs-dark');
 
