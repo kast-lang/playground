@@ -139,18 +139,22 @@ export class KastWorker {
         uri: string,
         contents: string,
         output_handler: (s: string) => void,
+        input_handler: (s: string) => Promise<string>,
     ) {
         await this.file_processing.waitForAllProcessing();
-        const output_listener = (event: MessageEvent) => {
+        const message_handler = async (event: MessageEvent) => {
             const data: interop.ServerMessage = event.data;
             if (data.type === 'output') {
                 output_handler(data.s);
+            } else if (data.type == 'input') {
+                const line = await input_handler(data.s);
+                this.send({ type: 'input', line });
             }
         };
-        this.worker.addEventListener('message', output_listener);
+        this.worker.addEventListener('message', message_handler);
         this.send({ type: 'run', uri, contents });
         await this.waitFor('run');
-        this.worker.removeEventListener('message', output_listener);
+        this.worker.removeEventListener('message', message_handler);
     }
 
     terminate() {

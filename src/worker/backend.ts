@@ -17,7 +17,9 @@ function find_state(uri: string): Kast.ProcessedFileState {
     return file_states[uri];
 }
 
-self.onmessage = (event) => {
+let currentInputResolve: ((s: string) => void) | null = null;
+
+self.onmessage = async (event) => {
     const data: interop.ClientMessage = event.data;
     console.log('worker received:', data);
     switch (data.type) {
@@ -86,10 +88,19 @@ self.onmessage = (event) => {
             Kast.setOutput((s) => {
                 respond({ type: 'output', s });
             });
-            Kast.run(data.contents);
+            Kast.setInput((s) => {
+                respond({ type: 'input', s });
+                return new Promise((resolve) => {
+                    currentInputResolve = resolve;
+                });
+            });
+            await Kast.run(data.contents);
             respond({ type: 'run' });
             break;
         }
+        case 'input':
+            currentInputResolve!(data.line);
+            break;
         default: {
             console.log('Unsupported request:', data satisfies never);
         }

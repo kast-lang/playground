@@ -43,7 +43,8 @@ declare interface Kast {
         ): import('vscode-languageserver-types').SemanticTokens | null;
     };
     setOutput(printString: (s: string) => void);
-    run(code: string);
+    setInput(input: (s: string) => Promise<string>);
+    run(code: string): Promise<void>;
     processFile(uri: string, source: string): Kast.ProcessedFileState;
 }
 

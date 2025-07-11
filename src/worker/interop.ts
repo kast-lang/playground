@@ -114,6 +114,16 @@ export interface RunResponse {
     type: 'run';
 }
 
+export interface InputRequest {
+    type: 'input';
+    s: string;
+}
+
+export interface InputResponse {
+    type: 'input';
+    line: string;
+}
+
 export type ClientMessage =
     | SemanticTokensLegendRequest
     | SemanticTokensRequest
@@ -124,7 +134,8 @@ export type ClientMessage =
     | RenameRequest
     | FindDefinitionRequest
     | InlayHintsRequest
-    | RunRequest;
+    | RunRequest
+    | InputResponse;
 
 export interface ClientMessageMap {
     semanticTokensLegend: SemanticTokensLegendRequest;
@@ -137,6 +148,7 @@ export interface ClientMessageMap {
     findDefinition: FindDefinitionRequest;
     inlayHints: InlayHintsRequest;
     run: RunRequest;
+    input: InputResponse;
 }
 
 export type ServerMessage =
@@ -151,7 +163,8 @@ export type ServerMessage =
     | FindDefinitionResponse
     | InlayHintsResponse
     | RunResponse
-    | OutputNotification;
+    | OutputNotification
+    | InputRequest;
 
 export interface ServerMessageMap {
     init: WorkerInitNotification;
@@ -166,4 +179,5 @@ export interface ServerMessageMap {
     inlayHints: InlayHintsResponse;
     run: RunResponse;
     output: OutputNotification;
+    input: InputRequest;
 }

@@ -367,11 +367,37 @@ document
 
 const output = document.getElementById('output')!;
 
+function input(prompt: string): Promise<string> {
+    return new Promise((resolve) => {
+        const container = document.getElementById('prompt-container')!;
+        const label = document.getElementById('prompt-label')!;
+        const input = document.getElementById(
+            'prompt-input',
+        ) as HTMLInputElement;
+
+        label.textContent = prompt;
+        input.value = '';
+        container.style.display = 'block';
+        input.focus();
+
+        function handler(e: KeyboardEvent) {
+            if (e.key === 'Enter') {
+                container.style.display = 'none';
+                input.removeEventListener('keydown', handler);
+                resolve(input.value);
+            }
+        }
+
+        input.addEventListener('keydown', handler);
+    });
+}
+
 let currentRunWorker: Promise<KastWorker> | null = null;
 async function run() {
     if (currentRunWorker !== null) {
         (await currentRunWorker).terminate();
     }
+    document.getElementById('prompt-container')!.style.display = 'none';
     output.innerText = '';
     currentRunWorker = KastWorker.init();
     const worker = await currentRunWorker;
@@ -380,6 +406,7 @@ async function run() {
         model.uri.toString(),
         model.getValue(),
         (s) => (output.innerText += s),
+        input,
     );
 }
 document.getElementById('run-button')!.addEventListener('click', run);
