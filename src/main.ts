@@ -97,17 +97,18 @@ monaco.languages.setLanguageConfiguration('kast', {
     ],
 });
 
-// monaco.languages.setMonarchTokensProvider('kast', {
-//     tokenizer: {
-//         root: [
-//             [/[a-z_$][\w$]*/, 'identifier'],
-//             [/\d+/, 'number'],
-//             [/".*?"/, 'string'],
-//             [/[{}()\[\]]/, '@brackets'],
-//             [/\/\/.*/, 'comment'],
-//         ],
-//     },
-// });
+monaco.languages.setMonarchTokensProvider('kast', {
+    tokenizer: {
+        root: [
+            [/[a-z_$][\w$]*/, 'identifier'],
+            [/\d+/, 'number'],
+            [/".*?"/, 'string'],
+            [/'.*?'/, 'string'],
+            [/[{}()\[\]]/, '@brackets'],
+            [/#.*/, 'comment'],
+        ],
+    },
+});
 
 const semanticTokensLegend = await kastWorker.getSemanticTokensLegend();
 
