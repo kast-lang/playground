@@ -124,6 +124,17 @@ export interface InputResponse {
     line: string;
 }
 
+export interface CompleteRequest {
+    type: 'complete';
+    uri: string;
+    position: lsp_types.Position;
+}
+
+export interface CompleteResponse {
+    type: 'complete';
+    result: lsp_types.CompletionItem[];
+}
+
 export type ClientMessage =
     | SemanticTokensLegendRequest
     | SemanticTokensRequest
@@ -135,7 +146,8 @@ export type ClientMessage =
     | FindDefinitionRequest
     | InlayHintsRequest
     | RunRequest
-    | InputResponse;
+    | InputResponse
+    | CompleteRequest;
 
 export interface ClientMessageMap {
     semanticTokensLegend: SemanticTokensLegendRequest;
@@ -149,6 +161,7 @@ export interface ClientMessageMap {
     inlayHints: InlayHintsRequest;
     run: RunRequest;
     input: InputResponse;
+    complete: CompleteRequest;
 }
 
 export type ServerMessage =
@@ -164,7 +177,8 @@ export type ServerMessage =
     | InlayHintsResponse
     | RunResponse
     | OutputNotification
-    | InputRequest;
+    | InputRequest
+    | CompleteResponse;
 
 export interface ServerMessageMap {
     init: WorkerInitNotification;
@@ -180,4 +194,5 @@ export interface ServerMessageMap {
     run: RunResponse;
     output: OutputNotification;
     input: InputRequest;
+    complete: CompleteResponse;
 }

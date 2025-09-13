@@ -125,6 +125,31 @@ monaco.languages.registerDocumentSemanticTokensProvider('kast', {
     releaseDocumentSemanticTokens(_resultId) {},
 });
 
+monaco.languages.registerCompletionItemProvider('kast', {
+    async provideCompletionItems(model, pos, _ctx, _token) {
+        const result = await kastWorker.complete(
+            model.uri.toString(),
+            to_kast_position(pos),
+        );
+        return {
+            suggestions: result.map(
+                (item): monaco.languages.CompletionItem => ({
+                    label: item.label,
+                    insertText: item.label,
+                    detail: item.detail,
+                    kind: item.kind!,
+                    range: {
+                        startLineNumber: pos.lineNumber,
+                        startColumn: pos.column,
+                        endLineNumber: pos.lineNumber,
+                        endColumn: pos.column,
+                    },
+                }),
+            ),
+        };
+    },
+});
+
 function to_kast_position(pos: monaco.Position): lsp.Position {
     return { line: pos.lineNumber - 1, character: pos.column - 1 };
 }

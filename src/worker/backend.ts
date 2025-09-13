@@ -101,6 +101,14 @@ self.onmessage = async (event) => {
         case 'input':
             currentInputResolve!(data.line);
             break;
+        case 'complete': {
+            const result = Kast.lsp.complete(
+                data.position,
+                find_state(data.uri),
+            );
+            respond({ type: 'complete', result });
+            break;
+        }
         default: {
             console.log('Unsupported request:', data satisfies never);
         }

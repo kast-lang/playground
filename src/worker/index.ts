@@ -107,6 +107,13 @@ export class KastWorker {
         return response.result;
     }
 
+    async complete(uri: string, position: lsp_types.Position) {
+        await this.file_processing.waitForAllProcessing();
+        this.send({ type: 'complete', uri, position });
+        const response = await this.waitFor('complete');
+        return response.result;
+    }
+
     async prepareRename(uri: string, position: lsp_types.Position) {
         await this.file_processing.waitForAllProcessing();
         this.send({ type: 'prepareRename', uri, position });

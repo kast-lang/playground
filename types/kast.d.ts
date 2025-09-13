@@ -12,6 +12,10 @@ namespace Kast {
             pos: Position,
             state: ProcessedFileState,
         ): import('vscode-languageserver-types').Hover | null;
+        complete(
+            pos: Position,
+            state: ProcessedFileState,
+        ): import('vscode-languageserver-types').CompletionItem[];
         rename(
             pos: Position,
             newName: string,
