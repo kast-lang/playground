@@ -1,7 +1,7 @@
 import * as interop from './interop';
 
 const KAST_JS = import.meta.env.PROD
-    ? 'https://kast-lang.github.io/kast/kast_js.bc.js'
+    ? 'https://builds.kast-lang.org/kast_js.bc.js'
     : '../../public/kast_js.bc.js';
 await import(KAST_JS);
 
